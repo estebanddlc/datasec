@@ -1,0 +1,24 @@
+[Unit]
+Description=datasec breach monitor
+Documentation=https://github.com/estebanddlc/datasec
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/datasec monitor run
+Restart=on-failure
+RestartSec=60
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=datasec-monitor
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.datasec
+
+[Install]
+WantedBy=default.target
