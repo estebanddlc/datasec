@@ -1,5 +1,7 @@
 # datasec
 
+[![CI](https://github.com/estebanddlc/datasec/actions/workflows/tests.yml/badge.svg)](https://github.com/estebanddlc/datasec/actions/workflows/tests.yml)
+
 Local-first personal security toolkit for people who want practical visibility into breach exposure, password hygiene, document metadata, and encrypted file handling.
 
 > Disclaimer: for personal and authorized defensive use only.
@@ -21,6 +23,15 @@ cd datasec
 pip install -r requirements.txt
 pip install .
 datasec --help
+```
+
+Python 3.10+ is required.
+
+For local development:
+
+```bash
+pip install -e ".[dev]"
+pytest -q
 ```
 
 ## Core commands
@@ -81,6 +92,13 @@ datasec meta strip secret.docx --encrypt
 
 The Windows scripts register a per-user scheduled task that runs `datasec monitor run --once` at logon and then every 6 hours.
 
+## Security notes
+
+- Password breach checks use k-anonymity against the HIBP range API.
+- Large-file encryption now uses streamed chunk mode with per-chunk tamper detection.
+- Hidden volumes are designed for plausible deniability at rest, not against live-memory forensics.
+- Reports are hashed with SHA-256 and can also be signed with GPG.
+
 ## What still needs work
 
 - Real KDBX support instead of KeePass XML-only import.
@@ -95,6 +113,10 @@ pytest -q
 ```
 
 The test suite covers breach-monitor state, password parsing, encryption roundtrips, tamper detection, metadata stripping, hidden volumes, and report hashing.
+
+## Project status
+
+The current release is `0.4.0`. See [CHANGELOG.md](./CHANGELOG.md) for release notes and upgrade history.
 
 ## License
 

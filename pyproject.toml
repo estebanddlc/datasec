@@ -23,6 +23,17 @@ dependencies = [
     "mutagen>=1.47.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/estebanddlc/datasec"
+Repository = "https://github.com/estebanddlc/datasec"
+Issues = "https://github.com/estebanddlc/datasec/issues"
+Changelog = "https://github.com/estebanddlc/datasec/blob/main/CHANGELOG.md"
+
 [project.scripts]
 datasec = "datasec.main:main"
 
