@@ -462,3 +462,28 @@ class TestAuditReport:
         assert "SECTION 3: SECURITY CHECKLIST" in content
         assert "SECTION 4: RECOMMENDATIONS"  in content
         assert "test@example.com"             in content
+
+
+from datasec.status_report import _build_recommendations
+
+
+class TestStatusReport:
+    def test_recommendations_reflect_missing_monitor_setup(self):
+        recs = _build_recommendations({"emails": {}, "api_key": "", "smtp": {}, "interval_hours": 24})
+        assert any("HIBP key" in item for item in recs)
+        assert any("monitor add" in item for item in recs)
+
+    def test_recommendations_reflect_existing_breach_state(self):
+        state = {
+            "emails": {
+                "user@example.com": {
+                    "breach_count": 2,
+                    "last_checked": "2026-04-25T10:00:00+00:00",
+                }
+            },
+            "api_key": "set",
+            "smtp": {"host": "smtp.example.com"},
+            "interval_hours": 24,
+        }
+        recs = _build_recommendations(state)
+        assert any("report generate" in item for item in recs)

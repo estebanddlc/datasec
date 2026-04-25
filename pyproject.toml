@@ -4,8 +4,8 @@ build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "datasec"
-version = "0.2.0"
-description = "Personal data protection toolkit — breach scanning, file encryption, OSINT, password audit, hidden volumes, metadata stripping"
+version = "0.4.0"
+description = "Personal data protection toolkit for breach monitoring, streamed encryption, vault auditing, and metadata hygiene"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "estebanddlc" }]

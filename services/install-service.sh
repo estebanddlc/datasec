@@ -45,9 +45,8 @@ elif [ "$OS" = "Darwin" ]; then
 
 else
     echo "Unsupported OS: $OS"
-    echo "For Windows, run the monitor via Task Scheduler:"
-    echo "  Action: python -m datasec.main monitor run"
-    echo "  Trigger: At startup / daily"
+    echo "For Windows, use the bundled PowerShell helper instead:"
+    echo "  powershell -ExecutionPolicy Bypass -File services/install-task.ps1"
     exit 1
 fi
 

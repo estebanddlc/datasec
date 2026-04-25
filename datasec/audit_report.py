@@ -1,16 +1,15 @@
 """
-Módulo 10: Audit Report
-Genera un reporte firmado de tu postura de seguridad.
-Incluye hash SHA-256 del reporte + firma GPG opcional.
-Sirve como evidencia timestamped del estado de seguridad.
+Module 10: Audit Report
+Generates a timestamped security posture report with SHA-256 hashing
+and optional GPG signing.
 """
 
 import hashlib
 import json
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.rule import Rule
@@ -20,8 +19,6 @@ console = Console()
 REPORT_DIR = Path.home() / ".datasec" / "reports"
 
 
-# ── Report generation ──────────────────────────────────────────────────────
-
 def generate_report(
     emails: list[str] = None,
     password_file: str = None,
@@ -30,20 +27,11 @@ def generate_report(
     sign_gpg: bool = False,
     gpg_key: str = None,
 ) -> str:
-    """
-    Generates a security posture report. Runs:
-      1. Breach check for each email (reads monitor state if available)
-      2. Password audit if password_file provided
-      3. OSINT summary
-      4. Hashes the report with SHA-256
-      5. Optionally signs with GPG
-
-    Returns path to the report file.
-    """
+    """Generate a security posture report and return its path."""
     out_dir = Path(output_dir) if output_dir else REPORT_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    now_utc   = datetime.now(timezone.utc)
+    now_utc = datetime.now(timezone.utc)
     timestamp = now_utc.strftime("%Y%m%d_%H%M%S")
     report_path = out_dir / f"datasec_report_{timestamp}.txt"
 
@@ -52,45 +40,40 @@ def generate_report(
     def w(line: str = ""):
         lines.append(line)
 
-    # ── Header ─────────────────────────────────────────────────────────────
     w("=" * 72)
     w("  DATASEC SECURITY POSTURE REPORT")
     w(f"  Generated: {now_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}")
-    w(f"  Tool:      datasec v0.2.0 — github.com/estebanddlc/datasec")
+    w("  Tool:      datasec v0.4.0 - github.com/estebanddlc/datasec")
     w("=" * 72)
     w()
 
-    # ── Section 1: Breach status ────────────────────────────────────────────
     w("-" * 72)
     w("  SECTION 1: BREACH STATUS")
     w("-" * 72)
     w()
 
     monitor_state = _load_monitor_state()
-
     if emails:
         for email in emails:
             w(f"  Email: {email}")
-            # Try to get cached state from monitor
             if email in monitor_state.get("emails", {}):
-                meta    = monitor_state["emails"][email]
-                count   = meta.get("breach_count", "unknown")
+                meta = monitor_state["emails"][email]
+                count = meta.get("breach_count", "unknown")
                 checked = meta.get("last_checked", "never")[:16].replace("T", " ")
-                names   = meta.get("breach_names", [])
+                names = meta.get("breach_names", [])
                 w(f"  Breaches found:  {count}")
                 w(f"  Last checked:    {checked} UTC")
                 if names:
-                    w(f"  Breach list:")
+                    w("  Breach list:")
                     for name in names:
                         w(f"    - {name}")
             else:
-                w("  Status: not in monitor list — run 'datasec monitor add' to track")
+                w("  Status: not in monitor list - run 'datasec monitor add' to track")
             w()
     else:
         w("  No emails provided. Use --email to include breach data.")
         w()
 
-    # ── Section 2: Password audit ───────────────────────────────────────────
     w("-" * 72)
     w("  SECTION 2: PASSWORD AUDIT")
     w("-" * 72)
@@ -99,12 +82,12 @@ def generate_report(
     if password_file:
         audit_results = _run_password_audit(password_file, password_format)
         if audit_results:
-            total   = audit_results["total"]
-            weak    = audit_results["weak"]
-            reused  = audit_results["reused"]
-            pwned   = audit_results["pwned"]
-            strong  = audit_results["strong"]
-            score   = int((strong / total) * 100) if total else 0
+            total = audit_results["total"]
+            weak = audit_results["weak"]
+            reused = audit_results["reused"]
+            pwned = audit_results["pwned"]
+            strong = audit_results["strong"]
+            score = int((strong / total) * 100) if total else 0
 
             w(f"  File audited:    {password_file}")
             w(f"  Total passwords: {total}")
@@ -125,67 +108,61 @@ def generate_report(
         w("  No password file provided. Use --passwords to include audit.")
         w()
 
-    # ── Section 3: Security checklist ──────────────────────────────────────
     w("-" * 72)
     w("  SECTION 3: SECURITY CHECKLIST")
     w("-" * 72)
     w()
 
     checklist = [
-        ("Monitor active",        bool(monitor_state.get("emails"))),
-        ("HIBP API key set",      bool(monitor_state.get("api_key"))),
-        ("Email alerts set",      bool(monitor_state.get("smtp", {}).get("host"))),
+        ("Monitor active", bool(monitor_state.get("emails"))),
+        ("HIBP API key set", bool(monitor_state.get("api_key"))),
+        ("Email alerts set", bool(monitor_state.get("smtp", {}).get("host"))),
         ("Password file audited", bool(password_file)),
     ]
-
-    for item, done in checklist:
+    for label, done in checklist:
         status = "[DONE]" if done else "[TODO]"
-        w(f"  {status}  {item}")
+        w(f"  {status}  {label}")
     w()
 
-    # ── Section 4: Recommendations ─────────────────────────────────────────
     w("-" * 72)
     w("  SECTION 4: RECOMMENDATIONS")
     w("-" * 72)
     w()
 
-    recs = [
-        "Use a password manager (Bitwarden is free and open source)",
-        "Enable 2FA on email, banking, and work accounts",
-        "Use unique passwords for every service",
-        "Run 'datasec monitor run --once' monthly to check for new breaches",
-        "Strip metadata from documents before sharing: 'datasec meta strip FILE'",
-        "Encrypt sensitive files before cloud backup: 'datasec encrypt FILE'",
+    recommendations = [
+        "Use a password manager.",
+        "Enable 2FA on email, banking, and work accounts.",
+        "Use unique passwords for every service.",
+        "Run 'datasec monitor run --once' regularly.",
+        "Strip metadata before sharing sensitive documents.",
+        "Encrypt sensitive files before cloud backup.",
     ]
-    for i, rec in enumerate(recs, 1):
-        w(f"  {i}. {rec}")
+    for index, recommendation in enumerate(recommendations, 1):
+        w(f"  {index}. {recommendation}")
     w()
 
-    # ── Footer ──────────────────────────────────────────────────────────────
     w("=" * 72)
     w("  END OF REPORT")
     w("=" * 72)
     w()
 
     report_text = "\n".join(lines)
-
-    # Write report
     report_path.write_text(report_text, encoding="utf-8")
 
-    # ── SHA-256 hash ────────────────────────────────────────────────────────
     sha256 = hashlib.sha256(report_text.encode("utf-8")).hexdigest()
     hash_path = report_path.with_suffix(".txt.sha256")
-    hash_path.write_text(f"{sha256}  {report_path.name}\n")
+    hash_path.write_text(f"{sha256}  {report_path.name}\n", encoding="utf-8")
 
-    console.print(Panel(
-        f"[bold green]✓ Report generated[/bold green]\n\n"
-        f"  Report:   [cyan]{report_path}[/cyan]\n"
-        f"  SHA-256:  [cyan]{hash_path}[/cyan]\n"
-        f"  Hash:     [dim]{sha256[:32]}...[/dim]",
-        border_style="green"
-    ))
+    console.print(
+        Panel(
+            f"[bold green]Report generated[/bold green]\n\n"
+            f"  Report:   [cyan]{report_path}[/cyan]\n"
+            f"  SHA-256:  [cyan]{hash_path}[/cyan]\n"
+            f"  Hash:     [dim]{sha256[:32]}...[/dim]",
+            border_style="green",
+        )
+    )
 
-    # ── GPG signing ────────────────────────────────────────────────────────
     if sign_gpg:
         _sign_gpg(report_path, gpg_key)
 
@@ -202,29 +179,25 @@ def verify_report(report_path: str) -> bool:
         console.print(f"[red]Hash file not found: {hash_path}[/red]")
         return False
 
-    expected_line = hash_path.read_text().strip()
-    expected_hash = expected_line.split()[0]
-
+    expected_hash = hash_path.read_text(encoding="utf-8").strip().split()[0]
     actual_hash = hashlib.sha256(path.read_bytes()).hexdigest()
 
     if actual_hash == expected_hash:
-        console.print(f"[bold green]✓ Report integrity verified[/bold green]")
+        console.print("[bold green]Report integrity verified[/bold green]")
         console.print(f"[dim]  SHA-256: {actual_hash}[/dim]")
         return True
-    else:
-        console.print(f"[bold red]✗ Hash mismatch — report may have been tampered[/bold red]")
-        console.print(f"[dim]  Expected: {expected_hash}[/dim]")
-        console.print(f"[dim]  Actual:   {actual_hash}[/dim]")
-        return False
 
+    console.print("[bold red]Hash mismatch - report may have been tampered with[/bold red]")
+    console.print(f"[dim]  Expected: {expected_hash}[/dim]")
+    console.print(f"[dim]  Actual:   {actual_hash}[/dim]")
+    return False
 
-# ── Helpers ────────────────────────────────────────────────────────────────
 
 def _load_monitor_state() -> dict:
     state_file = Path.home() / ".datasec" / "monitor_state.json"
     if state_file.exists():
         try:
-            return json.loads(state_file.read_text())
+            return json.loads(state_file.read_text(encoding="utf-8"))
         except Exception:
             pass
     return {}
@@ -232,31 +205,28 @@ def _load_monitor_state() -> dict:
 
 def _run_password_audit(filepath: str, formato: str) -> dict | None:
     try:
-        from datasec.password_auditor import _load_passwords, _analyze_strength
         from collections import Counter
+
+        from datasec.password_auditor import _analyze_strength, _load_passwords
 
         entries = _load_passwords(filepath, formato)
         if not entries:
             return None
 
-        all_passwords = [e["password"] for e in entries]
-        counts = Counter(all_passwords)
-
-        results   = []
-        weak_n    = 0
-        reused_n  = 0
-        pwned_n   = 0
-        strong_n  = 0
-        critical  = []
+        counts = Counter(entry["password"] for entry in entries)
+        weak_n = 0
+        reused_n = 0
+        strong_n = 0
+        critical = []
 
         for entry in entries:
-            pwd = entry["password"]
-            strength, issues = _analyze_strength(pwd)
-            reused = counts[pwd] > 1
+            password = entry["password"]
+            strength, issues = _analyze_strength(password)
+            reused = counts[password] > 1
             if reused:
-                issues.append(f"reused {counts[pwd]}x")
+                issues.append(f"reused {counts[password]}x")
                 reused_n += 1
-            if strength == "débil":
+            if strength == "debil":
                 weak_n += 1
             elif strength == "fuerte":
                 strong_n += 1
@@ -264,15 +234,15 @@ def _run_password_audit(filepath: str, formato: str) -> dict | None:
                 critical.append({**entry, "issues": issues})
 
         return {
-            "total":    len(entries),
-            "weak":     weak_n,
-            "reused":   reused_n,
-            "pwned":    pwned_n,
-            "strong":   strong_n,
+            "total": len(entries),
+            "weak": weak_n,
+            "reused": reused_n,
+            "pwned": 0,
+            "strong": strong_n,
             "critical": critical,
         }
-    except Exception as e:
-        console.print(f"[yellow]Password audit skipped: {e}[/yellow]")
+    except Exception as exc:
+        console.print(f"[yellow]Password audit skipped: {exc}[/yellow]")
         return None
 
 
@@ -285,19 +255,17 @@ def _sign_gpg(report_path: Path, key_id: str = None):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
-            sig_path = Path(str(report_path) + ".asc")
-            console.print(f"[green]✓ GPG signature: {sig_path}[/green]")
+            console.print(f"[green]GPG signature written: {report_path}.asc[/green]")
         else:
             console.print(f"[yellow]GPG signing failed: {result.stderr.strip()}[/yellow]")
-            console.print("[dim]Is GPG installed and do you have a key? Run: gpg --gen-key[/dim]")
     except FileNotFoundError:
-        console.print("[yellow]GPG not found. Install it to enable signing.[/yellow]")
+        console.print("[yellow]GPG is not installed.[/yellow]")
 
 
 def _print_verify_instructions(report_path: Path, hash_path: Path):
     console.print()
     console.print(Rule("[dim]Verification[/dim]"))
-    console.print(f"[dim]To verify this report hasn't been tampered with:[/dim]")
+    console.print("[dim]To verify this report later:[/dim]")
     console.print(f"[cyan]  datasec report verify {report_path}[/cyan]")
     console.print(f"[dim]Or manually:[/dim]")
     console.print(f"[cyan]  sha256sum -c {hash_path}[/cyan]")
